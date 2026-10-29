@@ -165,7 +165,7 @@ Telegram User         n8n                                        Express Backend
 
 1. **Telegram ID Safety**: Telegram user IDs are 64-bit integers exceeding JavaScript's `Number.MAX_SAFE_INTEGER` ($2^{53} - 1$). In PostgreSQL, the column is `BIGINT`. In TypeORM/TypeScript, it must use a custom column value transformer to serialize and deserialize as `string`.
 2. **Email Normalization**: All emails are normalized to lowercase before validation and persistence.
-3. **Cryptographic Token Storage**: OTP tokens are generated as 6-digit cryptographically secure pseudorandom numbers (`crypto.randomInt(100000, 999999)`). The database stores the SHA-256 hash of the token (`token_hash`) rather than plaintext.
+3. **Cryptographic Token Storage**: OTP tokens are generated as 6-digit cryptographically secure pseudorandom numbers (`crypto.randomInt(100000, 999999)`). The database stores the HMAC-SHA-256 hash of the token (`token_hash`) using `OTP_SECRET` (or `INTERNAL_API_KEY`) rather than plaintext. This guarantees that an external database dump cannot reverse-engineer 6-digit OTPs using rainbow tables without possessing the server's secret key.
 4. **Token Expiration & Invalidation**:
    - TTL: 15 minutes (`expires_at = NOW() + INTERVAL '15 minutes'`).
    - Single-use: `used_at` timestamp set upon successful verification.
@@ -353,7 +353,7 @@ src/
 │       ├── users.service.ts          # User persistence and querying logic
 │       └── users.schema.ts           # Zod query/body schemas
 ├── utils/
-│   ├── crypto.ts                     # Secure OTP generator and SHA-256 hasher
+│   ├── crypto.ts                     # Secure OTP generator and HMAC-SHA-256 hasher
 │   └── errors.ts                     # Domain HTTP error classes
 └── index.ts                          # Express application bootstrap and server listen
 ```
@@ -369,6 +369,7 @@ The application requires the following environment variables to run properly acr
 | `PORT`             | `number`  | `3000`             | Port on which the Express HTTP server listens.                                                   |
 | `NODE_ENV`         | `string`  | `development`      | Runtime environment (`development`, `production`, `test`).                                       |
 | `INTERNAL_API_KEY` | `string`  | _Required_         | Shared secret expected in the `x-api-key` header to authenticate n8n and internal HTTP requests. |
+| `OTP_SECRET`       | `string`  | Optional           | Secret key used for HMAC-SHA-256 OTP hashing (falls back to `INTERNAL_API_KEY` if omitted).      |
 | `DB_HOST`          | `string`  | `localhost`        | PostgreSQL server hostname or IP address.                                                        |
 | `DB_PORT`          | `number`  | `5432`             | PostgreSQL server port.                                                                          |
 | `DB_USER`          | `string`  | `postgres`         | Database username.                                                                               |
