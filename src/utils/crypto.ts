@@ -1,4 +1,5 @@
 import { createHmac, randomInt } from "node:crypto";
+import { config } from "../config/index.js";
 
 export function generateOtp(length = 6): string {
   if (length === 6) {
@@ -10,7 +11,7 @@ export function generateOtp(length = 6): string {
 }
 
 export function hashToken(token: string, secret?: string): string {
-  const hmacSecret = secret ?? process.env.OTP_SECRET ?? process.env.INTERNAL_API_KEY ?? "default-internal-otp-secret";
+  const hmacSecret = secret ?? config.security.otpSecret ?? config.security.internalApiKey;
 
   return createHmac("sha256", hmacSecret).update(token).digest("hex");
 }

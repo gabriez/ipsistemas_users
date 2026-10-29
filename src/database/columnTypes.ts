@@ -1,3 +1,3 @@
-const isSqlite = process.env.NODE_ENV === "test" || process.env.VITEST === "true" || process.env.DB_TYPE === "sqlite";
+import { config } from "../config/index.js";
 
-export const timestampColumnType = isSqlite ? "datetime" : "timestamptz";
+export const timestampColumnType = config.app.isTest ? "datetime" : "timestamp";

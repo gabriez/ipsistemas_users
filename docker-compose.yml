@@ -1,4 +1,26 @@
 services:
+  mariadb:
+    image: mariadb:11.4
+    container_name: ipsistemas-users-mariadb
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password}
+      MYSQL_DATABASE: ${DB_DATABASE:-ipsistemas_users}
+      MYSQL_USER: ${DB_USER:-ipsistemas_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-ipsistemas_password}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ipsistemas-network
+
   app:
     build:
       context: .
@@ -6,56 +28,30 @@ services:
     container_name: ipsistemas-users-api
     restart: unless-stopped
     ports:
-      - "${APP_PORT:-3001}:3000"
+      - "${PORT:-3000}:3000"
     environment:
+      - NODE_ENV=production
       - PORT=3000
-      - DB_DATABASE=/app/data/database.sqlite
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - OTP_SECRET=${OTP_SECRET}
+      - DB_HOST=mariadb
+      - DB_PORT=3306
+      - DB_USER=${DB_USER:-ipsistemas_user}
+      - DB_PASSWORD=${DB_PASSWORD:-ipsistemas_password}
+      - DB_DATABASE=${DB_DATABASE:-ipsistemas_users}
+      - DB_SSL=false
       - DB_LOGGING=false
       - DB_SYNCHRONIZE=${DB_SYNCHRONIZE:-false}
-      - WHISPER_URL=http://speaches:8000/v1
-      - API_BEARER_TOKEN=${API_BEARER_TOKEN:-secret-lan-token}
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-dummy-key}
-      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-google/gemini-2.5-flash}
-      - WEBHOOK_URL=${WEBHOOK_URL}
-      - WEBHOOK_AUTH_HEADER=${WEBHOOK_AUTH_HEADER:-X-N8N-Webhook-Token}
-      - WEBHOOK_AUTH_TOKEN=${WEBHOOK_AUTH_TOKEN}
-      - TEMP_DIR=/app/temp
-    volumes:
-      - app-data:/app/data
-      - app-temp:/app/temp
     depends_on:
-      - speaches
+      mariadb:
+        condition: service_healthy
     networks:
       - ipsistemas-network
 
-  database:
-    image: postgres:16-alpine
-    container_name: ipsistemas_db
-    env_file:
-      - .env
-    restart: unless-stopped
-    ports:
-      - "${DB_PORT:-5432}:5432"
-    environment:
-      - POSTGRES_USER=${DB_USERNAME:-postgres}
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
-      - POSTGRES_DB=${DB_DATABASE:-backoffice}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_DATABASE:-backoffice}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-    networks:
-      - ipsistemas-network
+volumes:
+  mariadb_data:
+    driver: local
 
 networks:
   ipsistemas-network:
     driver: bridge
-
-volumes:
-  app-data:
-  app-temp:
-  speaches-cache:

@@ -1,7 +1,7 @@
 # 🚀 Express + TypeScript API Template
 
 Welcome! This repository is your starting point for creating modern APIs with Express, TypeScript, and a polished workflow thanks to Husky. Put on your helmet, because we're going to do awesome things. 🌐🔗
-This repository uses PostgreSQL in the docker-compose.yml as the default database.
+This repository uses MariaDB in the docker-compose.yml as the default database.
 
 ---
 
