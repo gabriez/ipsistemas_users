@@ -1,21 +1,16 @@
 import "reflect-metadata";
-import express from "express";
-
 import AppDataSource from "#database/appDataSource.js";
+import { createApp } from "./app.js";
 
-const app = express();
+const app = createApp();
 const port = process.env.PORT ?? "3000";
-
-app.get("/", (_req, res) => {
-  res.send("Hello World!");
-});
 
 try {
   await AppDataSource.initialize();
-  console.log("Database connected successfully (SQLite)");
+  console.log("Database connected successfully (PostgreSQL)");
 
   app.listen(port, () => {
-    console.log(`Example app listening at http://localhost:${port}`);
+    console.log(`Server listening on port ${port}`);
   });
 } catch (error) {
   console.error("Error connecting to database:", error);

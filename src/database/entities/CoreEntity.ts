@@ -2,15 +2,15 @@ import { BaseEntity, CreateDateColumn, DeleteDateColumn, Entity, PrimaryGenerate
 
 @Entity()
 export abstract class CoreEntity extends BaseEntity {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
   @CreateDateColumn()
-  create_at!: Date;
-
-  @DeleteDateColumn()
-  deleted_at?: Date | null;
-
-  @PrimaryGeneratedColumn()
-  id!: number;
+  created_at!: Date;
 
   @UpdateDateColumn()
   updated_at!: Date;
+
+  @DeleteDateColumn()
+  deleted_at?: Date | null;
 }
