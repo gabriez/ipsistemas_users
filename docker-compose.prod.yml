@@ -1,0 +1,48 @@
+services:
+  mariadb:
+    image: mariadb:11.4
+    container_name: ipsistemas-users-mariadb
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password}
+      MYSQL_DATABASE: ${DB_DATABASE:-ipsistemas_users}
+      MYSQL_USER: ${DB_USER:-ipsistemas_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-ipsistemas_password}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ${NETWORK_NAME:-ipsistemas-network}
+
+  app:
+    image: ${REGISTRY_IMAGE:-ghcr.io/ipsistemas/ipsistemas_users}:${IMAGE_TAG:-latest}
+    container_name: ipsistemas-users-api
+    restart: unless-stopped
+    stop_grace_period: 15s
+    ports:
+      - "${APP_HOST:-0.0.0.0}:${APP_PORT:-3000}:3000"
+    env_file:
+      - .env
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - DB_HOST=mariadb
+      - DB_PORT=3306
+    networks:
+      - ${NETWORK_NAME:-ipsistemas-network}
+
+networks:
+  ipsistemas-network:
+    name: ${NETWORK_NAME:-ipsistemas-network}
+    external: true
+
+volumes:
+  mariadb_data:
+    driver: local

@@ -1,0 +1,58 @@
+services:
+  mariadb:
+    image: mariadb:11.4
+    container_name: ipsistemas-users-mariadb
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password}
+      MYSQL_DATABASE: ${DB_DATABASE:-ipsistemas_users}
+      MARIADB_ROOT_HOST: "%"
+      MYSQL_USER: ${DB_USER:-ipsistemas_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-ipsistemas_password}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ipsistemas-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ipsistemas-users-api
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - OTP_SECRET=${OTP_SECRET}
+      - DB_HOST=mariadb
+      - DB_PORT=3306
+      - DB_USER=${DB_USER:-ipsistemas_user}
+      - DB_PASSWORD=${DB_PASSWORD:-ipsistemas_password}
+      - DB_DATABASE=${DB_DATABASE:-ipsistemas_users}
+      - DB_SSL=false
+      - DB_LOGGING=false
+      - DB_SYNCHRONIZE=${DB_SYNCHRONIZE:-false}
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - ipsistemas-network
+
+volumes:
+  mariadb_data:
+    driver: local
+
+networks:
+  ipsistemas-network:
+    driver: bridge

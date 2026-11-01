@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import AppDataSource from "#database/appDataSource.js";
 
-describe("Database Configuration (SQLite)", () => {
+describe("Database Configuration", () => {
   beforeAll(async () => {
     if (!AppDataSource.isInitialized) {
       await AppDataSource.initialize();
@@ -15,7 +15,7 @@ describe("Database Configuration (SQLite)", () => {
     }
   });
 
-  it("should initialize the SQLite data source successfully", () => {
+  it("should initialize the in-memory test data source successfully", () => {
     expect(AppDataSource.isInitialized).toBe(true);
     expect(AppDataSource.options.type).toBe("sqlite");
   });
