@@ -1,22 +1,18 @@
-import { Column, Entity, Index, JoinColumn, ManyToOne } from "typeorm";
+import { Column, Entity, Index, JoinColumn, ManyToOne, type Relation } from "typeorm";
 import { timestampColumnType } from "../columnTypes.js";
 import { CoreEntity } from "./CoreEntity.js";
-import { UserEntity } from "./UserEntity.js";
+import type { UserEntity } from "./UserEntity.js";
 
 @Entity("verification_tokens")
 export class VerificationTokenEntity extends CoreEntity {
   @Column({ type: "uuid" })
   user_id!: string;
 
-  @ManyToOne(
-    () => UserEntity,
-    (user) => user.tokens,
-    {
-      onDelete: "CASCADE",
-    },
-  )
+  @ManyToOne("UserEntity", (user: UserEntity) => user.tokens, {
+    onDelete: "CASCADE",
+  })
   @JoinColumn({ name: "user_id" })
-  user!: UserEntity;
+  user!: Relation<UserEntity>;
 
   @Index()
   @Column({ type: "varchar", length: 64 })

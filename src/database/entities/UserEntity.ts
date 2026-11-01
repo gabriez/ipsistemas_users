@@ -1,8 +1,8 @@
-import { Column, Entity, Index, OneToMany, type ValueTransformer } from "typeorm";
+import { Column, Entity, Index, OneToMany, type Relation, type ValueTransformer } from "typeorm";
 import { UserStatus, type UserStatusType } from "../../types/user.types.js";
 import { timestampColumnType } from "../columnTypes.js";
 import { CoreEntity } from "./CoreEntity.js";
-import { VerificationTokenEntity } from "./VerificationTokenEntity.js";
+import type { VerificationTokenEntity } from "./VerificationTokenEntity.js";
 
 export { UserStatus, type UserStatusType };
 
@@ -43,12 +43,8 @@ export class UserEntity extends CoreEntity {
   @Column({ type: timestampColumnType as "datetime", nullable: true })
   verified_at?: Date | null;
 
-  @OneToMany(
-    () => VerificationTokenEntity,
-    (token) => token.user,
-    {
-      cascade: ["remove"],
-    },
-  )
-  tokens!: VerificationTokenEntity[];
+  @OneToMany("VerificationTokenEntity", (token: VerificationTokenEntity) => token.user, {
+    cascade: ["remove"],
+  })
+  tokens!: Relation<VerificationTokenEntity[]>;
 }
