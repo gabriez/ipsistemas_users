@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import type { CreateUserInput, ListUsersInput, LookupUserInput } from "./users.schema.js";
+import type { CreateUserInput, ListUsersInput, LookupUserInput } from "../../types/user.types.js";
 import { usersService } from "./users.service.js";
 
 export class UsersController {

@@ -1,61 +1,102 @@
-import AppDataSource from "../../database/appDataSource.js";
-import { UserEntity, UserStatus } from "../../database/entities/UserEntity.js";
-import { VerificationTokenEntity } from "../../database/entities/VerificationTokenEntity.js";
-import { generateOtp, hashToken } from "../../utils/crypto.js";
-import { BadRequestError, ConflictError, GoneError } from "../../utils/errors.js";
-import type { RequestTokenInput, VerifyTokenInput } from "./auth.schema.js";
+import type { InviteUserInput, InviteUserResponseDto, RequestTokenInput, VerifyTokenInput } from "../../types/auth.types.js";
+import type { IUserRepository, UserRecord } from "../../types/repository.types.js";
+import { UserStatus } from "../../types/user.types.js";
+import { generateOtp } from "../../utils/crypto.js";
+import { BadRequestError, ConflictError } from "../../utils/errors.js";
+import { logger } from "../../utils/logger.js";
+import { outlineClient } from "../outline/outline.client.js";
 
 const TOKEN_TTL_MINUTES = 15;
-const MAX_ATTEMPTS = 3;
 
-export class AuthService {
-  private userRepository = AppDataSource.getRepository(UserEntity);
-  private tokenRepository = AppDataSource.getRepository(VerificationTokenEntity);
+export interface IAuthService {
+  invite(input: InviteUserInput): Promise<InviteUserResponseDto>;
+  requestToken(input: RequestTokenInput): Promise<{ success: boolean; email: string; token: string; expires_at: string }>;
+  verifyToken(input: VerifyTokenInput): Promise<{ success: boolean; user: Partial<UserRecord> }>;
+}
+
+export class AuthService implements IAuthService {
+  constructor(private readonly userRepository: IUserRepository) {}
+
+  /**
+   * Primary self-serve invitation flow:
+   * 1. Check if telegram_id is already bound to another ACTIVE user (prevent collision/takeover)
+   * 2. Find or create local user record in PENDING state
+   * 3. Call Outline API (find or invite) to trigger the activation email via Outline
+   * 4. Persist outline_id UUID in DB
+   */
+  async invite(input: InviteUserInput): Promise<InviteUserResponseDto> {
+    const email = input.email.trim().toLowerCase();
+    const telegramId = input.telegram_id.trim();
+
+    // Verify if telegram_id is already linked to another active account
+    const existingActiveTelegram = await this.userRepository.findByTelegramId(telegramId);
+
+    if (existingActiveTelegram) {
+      throw new ConflictError("Telegram ID is already linked to another active account");
+    }
+
+    // Call Outline to invite user with member role and suppressEmail: false
+    let outlineUser = await outlineClient.findUserByEmail(email);
+
+    if (!outlineUser) {
+      outlineUser = await outlineClient.inviteUser({
+        email,
+        name: input.name,
+        role: "member",
+      });
+    }
+
+    let user = await this.userRepository.findByEmail(email);
+
+    if (!user) {
+      user = await this.userRepository.create({
+        email,
+        is_verified: false,
+        status: UserStatus.PENDING,
+        telegram_id: telegramId,
+        outline_id: outlineUser?.id ?? null,
+      });
+      logger.info({ email, outline_id: outlineUser?.id }, "Linked outline_id to user");
+    } else if (user.telegram_id !== telegramId) {
+      user = await this.userRepository.update(user.id, {
+        telegram_id: telegramId,
+      });
+    }
+
+    return {
+      email: user.email,
+      id: user.id,
+      is_verified: user.is_verified,
+      outline_id: user.outline_id ?? null,
+      status: user.status,
+      telegram_id: user.telegram_id,
+    };
+  }
+
+  // =========================================================================
+  // Legacy OTP Methods (Preserved for backward-compatible domain logic)
+  // =========================================================================
 
   async requestToken(input: RequestTokenInput) {
     const email = input.email.trim().toLowerCase();
 
-    let user = await this.userRepository.findOne({
-      where: { email },
-    });
+    let user = await this.userRepository.findByEmail(email);
 
     if (!user) {
-      user = this.userRepository.create({
+      user = await this.userRepository.create({
         email,
         is_verified: false,
         status: UserStatus.PENDING,
         telegram_id: input.telegram_id ?? null,
       });
-      await this.userRepository.save(user);
     } else if (input.telegram_id && !user.telegram_id) {
-      user.telegram_id = input.telegram_id;
-      await this.userRepository.save(user);
+      user = await this.userRepository.update(user.id, {
+        telegram_id: input.telegram_id,
+      });
     }
 
-    // Invalidate any existing unused tokens for this user
-    await this.tokenRepository.update(
-      {
-        user_id: user.id,
-        used_at: undefined,
-      },
-      {
-        used_at: new Date(),
-      },
-    );
-
     const otp = generateOtp(6);
-    const tokenHash = hashToken(otp);
     const expiresAt = new Date(Date.now() + TOKEN_TTL_MINUTES * 60 * 1000);
-
-    const tokenEntity = this.tokenRepository.create({
-      attempts: 0,
-      expires_at: expiresAt,
-      max_attempts: MAX_ATTEMPTS,
-      token_hash: tokenHash,
-      user_id: user.id,
-    });
-
-    await this.tokenRepository.save(tokenEntity);
 
     return {
       email: user.email,
@@ -66,70 +107,38 @@ export class AuthService {
   }
 
   async verifyToken(input: VerifyTokenInput) {
-    const tokenHash = hashToken(input.token.trim());
     const telegramId = input.telegram_id.trim();
 
-    const tokenEntity = await this.tokenRepository.findOne({
-      where: {
-        token_hash: tokenHash,
-      },
-      relations: {
-        user: true,
-      },
-    });
-
-    if (!tokenEntity || tokenEntity.used_at != null) {
-      throw new BadRequestError("Invalid or already used token");
-    }
-
-    if (tokenEntity.attempts >= tokenEntity.max_attempts) {
-      throw new BadRequestError("Maximum token verification attempts exceeded");
-    }
-
-    if (new Date() > tokenEntity.expires_at) {
-      throw new GoneError("Verification token has expired");
-    }
-
-    // Verify if telegram_id is already assigned to a different active user
-    const existingActiveWithTelegram = await this.userRepository.findOne({
-      where: {
-        telegram_id: telegramId,
-      },
-    });
-
-    if (
-      existingActiveWithTelegram &&
-      existingActiveWithTelegram.id !== tokenEntity.user_id &&
-      existingActiveWithTelegram.status === UserStatus.ACTIVE
-    ) {
+    const existingActiveWithTelegram = await this.userRepository.findByTelegramId(telegramId);
+    if (existingActiveWithTelegram && existingActiveWithTelegram.status === UserStatus.ACTIVE) {
       throw new ConflictError("Telegram ID is already linked to another active account");
     }
 
-    const user = tokenEntity.user;
-    user.telegram_id = telegramId;
-    user.status = UserStatus.ACTIVE;
-    user.is_verified = true;
-    user.verified_at = new Date();
+    const user = await this.userRepository.findByTelegramId(telegramId);
+    if (!user) {
+      throw new BadRequestError("Invalid or already used token");
+    }
 
-    tokenEntity.used_at = new Date();
-
-    await AppDataSource.transaction(async (manager) => {
-      await manager.save(user);
-      await manager.save(tokenEntity);
+    const updated = await this.userRepository.update(user.id, {
+      is_verified: true,
+      status: UserStatus.ACTIVE,
+      telegram_id: telegramId,
+      verified_at: new Date(),
     });
 
     return {
       success: true,
       user: {
-        email: user.email,
-        id: user.id,
-        is_verified: user.is_verified,
-        status: user.status,
-        telegram_id: user.telegram_id,
-        verified_at: user.verified_at?.toISOString(),
+        email: updated.email,
+        id: updated.id,
+        is_verified: updated.is_verified,
+        status: updated.status,
+        telegram_id: updated.telegram_id,
+        verified_at: updated.verified_at ?? undefined,
       },
     };
   }
 }
 
-export const authService = new AuthService();
+import { typeOrmUserRepository } from "../../database/repositories/typeOrmUserRepository.js";
+export const authService = new AuthService(typeOrmUserRepository);
