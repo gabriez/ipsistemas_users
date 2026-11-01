@@ -1,4 +1,7 @@
+import * as dotenv from "dotenv";
 import { z } from "zod";
+
+dotenv.config();
 
 const configSchema = z.object({
   app: z.object({
@@ -20,6 +23,11 @@ const configSchema = z.object({
   security: z.object({
     internalApiKey: z.string().min(1, "INTERNAL_API_KEY must not be empty"),
     otpSecret: z.string().optional(),
+  }),
+  outline: z.object({
+    apiUrl: z.url().default("https://app.getoutline.com"),
+    apiKey: z.string().min(1, "OUTLINE_API_KEY must not be empty"),
+    webhookSecret: z.string().optional(),
   }),
 });
 
@@ -48,6 +56,11 @@ function loadConfig(): AppConfig {
     security: {
       internalApiKey: process.env.INTERNAL_API_KEY ?? (isTest ? "test-secret-key" : "change_this_to_a_secure_key"),
       otpSecret: process.env.OTP_SECRET,
+    },
+    outline: {
+      apiUrl: process.env.OUTLINE_API_URL ?? "https://app.getoutline.com",
+      apiKey: process.env.OUTLINE_API_KEY ?? (isTest ? "test-outline-key" : "change_this_to_outline_key"),
+      webhookSecret: process.env.OUTLINE_WEBHOOK_SECRET ?? (isTest ? "test-outline-webhook-secret" : undefined),
     },
   };
 
