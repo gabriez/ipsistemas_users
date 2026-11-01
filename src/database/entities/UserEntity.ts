@@ -1,15 +1,10 @@
 import { Column, Entity, Index, OneToMany, type ValueTransformer } from "typeorm";
+import { UserStatus, type UserStatusType } from "../../types/user.types.js";
 import { timestampColumnType } from "../columnTypes.js";
 import { CoreEntity } from "./CoreEntity.js";
 import { VerificationTokenEntity } from "./VerificationTokenEntity.js";
 
-export const UserStatus = {
-  ACTIVE: "ACTIVE",
-  BLOCKED: "BLOCKED",
-  PENDING: "PENDING",
-} as const;
-
-export type UserStatusType = (typeof UserStatus)[keyof typeof UserStatus];
+export { UserStatus, type UserStatusType };
 
 const bigIntTransformer: ValueTransformer = {
   to: (value?: string | null) => (value ? String(value) : null),
@@ -31,7 +26,8 @@ export class UserEntity extends CoreEntity {
   })
   telegram_id?: string | null;
 
-  @Column({ type: "varchar", length: 255, nullable: true })
+  @Index()
+  @Column({ type: "varchar", length: 255, nullable: true, unique: true })
   outline_id?: string | null;
 
   @Column({

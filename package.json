@@ -35,7 +35,6 @@
     "@types/express": "^5.0.6",
     "@types/node": "^25.2.3",
     "@types/shelljs": "^0.10.0",
-    "@types/sqlite3": "^3.1.11",
     "@types/supertest": "^7.2.1",
     "@vitest/coverage-v8": "^4.0.18",
     "@vitest/ui": "^4.0.18",
@@ -48,8 +47,12 @@
     "vitest": "^4.0.18"
   },
   "dependencies": {
+    "axios": "^1.21.0",
+    "dotenv": "^18.0.9",
     "express": "^5.2.1",
     "mysql2": "^3.24.6",
+    "pino": "^10.4.0",
+    "pino-pretty": "^13.2.0",
     "reflect-metadata": "^0.2.2",
     "sqlite3": "^6.0.1",
     "typeorm": "^0.3.31",
@@ -57,12 +60,6 @@
   },
   "imports": {
     "#*": "./src/*"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "sqlite3",
-      "esbuild"
-    ]
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json,jsonc}": [
