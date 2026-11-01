@@ -32,7 +32,6 @@ export class CoreSchema1793529059450 implements MigrationInterface {
                 \`status\` varchar(20) NOT NULL DEFAULT 'PENDING',
                 \`is_verified\` tinyint NOT NULL DEFAULT 0,
                 \`verified_at\` timestamp NULL,
-                INDEX \`IDX_d09c3c1e3aadee2c0d0e9a6b08\` (\`outline_id\`),
                 UNIQUE INDEX \`IDX_97672ac88f789774dd47f7c8be\` (\`email\`),
                 UNIQUE INDEX \`IDX_1a1e4649fd31ea6ec6b025c7bf\` (\`telegram_id\`),
                 UNIQUE INDEX \`IDX_d09c3c1e3aadee2c0d0e9a6b08\` (\`outline_id\`),
