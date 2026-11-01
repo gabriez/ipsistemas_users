@@ -41,7 +41,6 @@ services:
 networks:
   ipsistemas-network:
     name: ${NETWORK_NAME:-ipsistemas-network}
-    external: true
 
 volumes:
   mariadb_data:
