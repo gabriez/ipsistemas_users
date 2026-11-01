@@ -67,6 +67,7 @@
       "esbuild"
     ]
   },
+  "packageManager": "pnpm@10.33.0",
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json,jsonc}": [
       "biome check --write --no-errors-on-unmatched"
