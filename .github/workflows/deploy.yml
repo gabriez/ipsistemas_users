@@ -112,8 +112,10 @@ jobs:
           TARGET_DIR: ${{ secrets.PROXMOX_DEPLOY_PATH || '/opt/ipsistemas_users' }}
           PROD_ENV: ${{ secrets.PROD_ENV }}
         run: |
-          ssh -i ~/.ssh/deploy_key -p "$SSH_PORT" -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" "mkdir -p $TARGET_DIR"
+          ssh -i ~/.ssh/deploy_key -p "$SSH_PORT" -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" \
+            "mkdir -p $TARGET_DIR && if [ -d $TARGET_DIR/nginx/nginx.conf ]; then rm -rf $TARGET_DIR/nginx/nginx.conf; fi"
           scp -i ~/.ssh/deploy_key -P "$SSH_PORT" -o StrictHostKeyChecking=no docker-compose.prod.yml "$SSH_USER@$SSH_HOST:$TARGET_DIR/docker-compose.yml"
+          scp -r -i ~/.ssh/deploy_key -P "$SSH_PORT" -o StrictHostKeyChecking=no nginx "$SSH_USER@$SSH_HOST:$TARGET_DIR/"
 
           # Inject full .env from secret
           printf "%s\n" "$PROD_ENV" | ssh -i ~/.ssh/deploy_key -p "$SSH_PORT" -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" "cat > $TARGET_DIR/.env && chmod 600 $TARGET_DIR/.env"
