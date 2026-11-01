@@ -20,3 +20,9 @@
 *.sqlite-journal
 *.sqlite3
 *.db
+
+# Nginx TLS Certificates & Keys
+nginx/certs/*.key
+nginx/certs/*.crt
+nginx/certs/*.pem
+!nginx/certs/.gitkeep

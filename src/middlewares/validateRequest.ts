@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { ZodError, type ZodType } from "zod";
 import { BadRequestError } from "../utils/errors.js";
+import { logger } from "../utils/logger.js";
 
 export interface ValidationErrorItem {
   field: string;
@@ -21,7 +22,9 @@ export function validateBody<T>(schema: ZodType<T>) {
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        next(new BadRequestError("Validation failed", formatZodIssues(error)));
+        const issues = formatZodIssues(error);
+        (req.log ?? logger).warn({ issues }, "Request body validation failed");
+        next(new BadRequestError("Validation failed", issues));
         return;
       }
       next(error);
@@ -42,7 +45,9 @@ export function validateQuery<T>(schema: ZodType<T>) {
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        next(new BadRequestError("Query validation failed", formatZodIssues(error)));
+        const issues = formatZodIssues(error);
+        (req.log ?? logger).warn({ issues }, "Request query validation failed");
+        next(new BadRequestError("Query validation failed", issues));
         return;
       }
       next(error);

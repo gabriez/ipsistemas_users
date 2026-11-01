@@ -1,5 +1,6 @@
 import express from "express";
 import { errorHandler } from "./middlewares/errorHandler.js";
+import { requestLogger } from "./middlewares/requestLogger.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import usersRoutes from "./modules/users/users.routes.js";
 import webhookRoutes from "./modules/webhooks/webhook.routes.js";
@@ -7,10 +8,12 @@ import webhookRoutes from "./modules/webhooks/webhook.routes.js";
 export function createApp() {
   const app = express();
 
+  app.use(requestLogger);
+
   app.use(
     express.json({
       verify: (req, _res, buf) => {
-        (req as unknown as { rawBody?: string }).rawBody = buf.toString("utf8");
+        req.rawBody = buf.toString("utf8");
       },
     }),
   );
