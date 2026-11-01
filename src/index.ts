@@ -21,10 +21,6 @@ try {
   await AppDataSource.initialize();
   logger.info("Database connected successfully");
 
-  logger.info("Applying pending database migrations...");
-  await AppDataSource.runMigrations();
-  logger.info("Database migrations applied successfully");
-
   const server = app.listen(port, () => {
     logger.info({ env: config.app.env, port }, `Server listening on port ${port}`);
   });
