@@ -54,7 +54,7 @@ services:
     container_name: ipsistemas-users-cert-gen
     restart: "no"
     environment:
-      - LAN_IP=${LAN_IP:-192.168.1.100}
+      - APP_HOST=${APP_HOST:-192.168.1.100}
     volumes:
       - ./nginx/certs:/certs
     entrypoint:
@@ -65,7 +65,7 @@ services:
           openssl req -x509 -nodes -days 825 -newkey rsa:2048 \
             -keyout /certs/server.key \
             -out /certs/server.crt \
-            -subj "/CN=$${LAN_IP:-192.168.1.100}" \
+            -subj "/CN=$${APP_HOST:-192.168.1.100}" \
             -addext "subjectAltName=IP:$${LAN_IP:-192.168.1.100},IP:127.0.0.1,DNS:localhost" && \
           chmod 644 /certs/server.key /certs/server.crt;
         fi
