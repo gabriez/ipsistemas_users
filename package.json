@@ -61,6 +61,12 @@
   "imports": {
     "#*": "./src/*"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "sqlite3",
+      "esbuild"
+    ]
+  },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json,jsonc}": [
       "biome check --write --no-errors-on-unmatched"
