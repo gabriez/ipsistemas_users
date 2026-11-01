@@ -28,10 +28,13 @@ export class AuthService implements IAuthService {
     const email = input.email.trim().toLowerCase();
     const telegramId = input.telegram_id.trim();
 
+    logger.info({ email, telegramId }, "Processing user invite request");
+
     // Verify if telegram_id is already linked to another active account
     const existingActiveTelegram = await this.userRepository.findByTelegramId(telegramId);
 
     if (existingActiveTelegram) {
+      logger.warn({ existingUserId: existingActiveTelegram.id, telegramId }, "Invite conflict: Telegram ID already linked to active account");
       throw new ConflictError("Telegram ID is already linked to another active account");
     }
 
@@ -46,22 +49,27 @@ export class AuthService implements IAuthService {
       });
     }
 
+    logger.info({ email, outlineId: outlineUser?.id }, "Outline user identity resolved");
+
     let user = await this.userRepository.findByEmail(email);
 
     if (!user) {
       user = await this.userRepository.create({
         email,
         is_verified: false,
+        outline_id: outlineUser?.id ?? null,
         status: UserStatus.PENDING,
         telegram_id: telegramId,
-        outline_id: outlineUser?.id ?? null,
       });
-      logger.info({ email, outline_id: outlineUser?.id }, "Linked outline_id to user");
+      logger.info({ email, outline_id: outlineUser?.id, userId: user.id }, "Created local user and linked Outline ID");
     } else if (user.telegram_id !== telegramId) {
       user = await this.userRepository.update(user.id, {
         telegram_id: telegramId,
       });
+      logger.info({ email, telegramId, userId: user.id }, "Updated user telegram_id binding");
     }
+
+    logger.info({ email: user.email, status: user.status, userId: user.id }, "User invite completed successfully");
 
     return {
       email: user.email,

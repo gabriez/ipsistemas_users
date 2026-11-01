@@ -256,3 +256,47 @@ Telegram User         n8n                                        Express Backend
   1. Runs all quality checks.
   2. Builds and pushes multi-architecture Docker image to GitHub Container Registry (`ghcr.io`).
   3. Deploys via SSH to target Proxmox VM, syncs `docker-compose.prod.yml`, injects production `.env`, pulls updated image, and performs zero-downtime rolling restart.
+
+---
+
+## 7. Observability, Logging & LAN HTTPS Ingress
+
+### 7.1. Structured Logging & Distributed Traceability (Pino)
+
+All logging is centralized via **Pino** (`src/utils/logger.ts`) with request-level correlation:
+- **Request ID Propagation (`x-request-id`)**:
+  - The `requestLogger` middleware generates a UUID or adopts incoming `x-request-id` headers.
+  - Automatically injects `x-request-id` in response headers for client/n8n traceability.
+  - Generates child loggers attached to `req.log` enriched with `{ reqId, method, path }`.
+- **Sensitive Data Redaction**:
+  - Header secrets (`x-api-key`, `authorization`), tokens, and passwords are automatically redacted (`[REDACTED]`).
+- **Error Observability**:
+  - `errorHandler` logs HTTP 4xx warnings with validation details and HTTP 5xx errors with full stack traces.
+  - Server bootstrap and graceful shutdown lifecycle events (`SIGINT`, `SIGTERM`) are logged with database connection status.
+
+### 7.2. LAN HTTPS Ingress (Nginx & Automated TLS Container for Outline Webhook)
+
+Outline requires HTTPS endpoints to deliver webhook events (`users.create`, `users.activate`, `users.suspend`). When hosting `ipsistemas_users` on a private LAN IP (e.g. `192.168.1.150`), self-signed certificates must declare a **Subject Alternative Name (SAN)** of type `IP:<LAN_IP>` or clients reject the TLS handshake.
+
+- **Topology**:
+  - Outline / Client / Bot ──(HTTPS/443)──► Nginx (TLS Termination) ──(HTTP/3000)──► Express API
+  - HTTP port 80 automatically redirects to HTTPS port 443.
+  - Nginx maps incoming `X-Request-ID` or generates `$request_id` to pass to the backend.
+- **Automated Certificate Container (`cert-gen`)**:
+  - Service `cert-gen` uses `alpine/openssl` as an ephemeral init container (`restart: "no"`).
+  - Uses an inline entrypoint command `/bin/sh -c '...'` directly in `docker-compose.yml` (no host scripts required).
+  - Generates `server.key` and `server.crt` inside `./nginx/certs/` with OpenSSL 3 `-addext` only if they don't exist:
+
+    ```sh
+    openssl req -x509 -nodes -days 825 -newkey rsa:2048 \
+      -keyout /certs/server.key \
+      -out /certs/server.crt \
+      -subj "/CN=${LAN_IP}" \
+      -addext "subjectAltName=IP:${LAN_IP},IP:127.0.0.1,DNS:localhost"
+    ```
+
+- **Docker Compose Startup Flow**:
+  1. `mariadb` boots and passes healthcheck.
+  2. `cert-gen` generates/verifies the SSL certificates and exits successfully (`condition: service_completed_successfully`).
+  3. `app` (Express API) starts.
+  4. `nginx` starts, mounting the generated certificates and proxying HTTPS traffic to `app:3000`.

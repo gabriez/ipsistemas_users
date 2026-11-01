@@ -1,18 +1,54 @@
 import "reflect-metadata";
 import { createApp } from "./app.js";
+import { config } from "./config/index.js";
 import AppDataSource from "./database/appDataSource.js";
+import { logger } from "./utils/logger.js";
 
 const app = createApp();
-const port = process.env.PORT ?? "3000";
+const port = config.app.port;
 
 try {
-  await AppDataSource.initialize();
-  console.log("Database connected successfully (PostgreSQL)");
+  logger.info(
+    {
+      database: config.db.database,
+      host: config.db.host,
+      port: config.db.port,
+      type: config.db.type,
+    },
+    "Initializing database connection...",
+  );
 
-  app.listen(port, () => {
-    console.log(`Server listening on port ${port}`);
+  await AppDataSource.initialize();
+  logger.info("Database connected successfully");
+
+  logger.info("Applying pending database migrations...");
+  await AppDataSource.runMigrations();
+  logger.info("Database migrations applied successfully");
+
+  const server = app.listen(port, () => {
+    logger.info({ env: config.app.env, port }, `Server listening on port ${port}`);
   });
+
+  const handleShutdown = (signal: string) => {
+    logger.info({ signal }, "Received shutdown signal. Gracefully closing server...");
+    server.close(async () => {
+      try {
+        if (AppDataSource.isInitialized) {
+          await AppDataSource.destroy();
+          logger.info("Database connection closed cleanly");
+        }
+        logger.info("Server shut down successfully");
+        process.exit(0);
+      } catch (err) {
+        logger.error({ err }, "Error during graceful shutdown");
+        process.exit(1);
+      }
+    });
+  };
+
+  process.on("SIGINT", () => handleShutdown("SIGINT"));
+  process.on("SIGTERM", () => handleShutdown("SIGTERM"));
 } catch (error) {
-  console.error("Error connecting to database:", error);
+  logger.fatal({ err: error }, "Fatal error initializing application");
   process.exit(1);
 }
