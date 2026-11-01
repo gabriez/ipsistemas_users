@@ -14,20 +14,19 @@ const bigIntTransformer: ValueTransformer = {
 @Entity("users")
 export class UserEntity extends CoreEntity {
   @Index({ unique: true })
-  @Column({ type: "varchar", length: 255, unique: true })
+  @Column({ type: "varchar", length: 255 })
   email!: string;
 
   @Index({ unique: true })
   @Column({
     type: "bigint",
     nullable: true,
-    unique: true,
     transformer: bigIntTransformer,
   })
   telegram_id?: string | null;
 
-  @Index()
-  @Column({ type: "varchar", length: 255, nullable: true, unique: true })
+  @Index({ unique: true })
+  @Column({ type: "varchar", length: 255, nullable: true })
   outline_id?: string | null;
 
   @Column({
