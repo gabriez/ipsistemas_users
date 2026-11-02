@@ -69,8 +69,8 @@ export class WebhookService implements IWebhookService {
    * - users.suspend: Suspended user -> status BLOCKED
    */
   async handleOutlineEvent(payload: OutlineWebhookEventPayload): Promise<WebhookHandleResult> {
-    const eventName = payload.name;
-    const model = payload.data?.model ?? payload.model;
+    const eventName = payload.event;
+    const model = payload.payload?.model ?? payload.model;
 
     logger.info({ event: eventName, model }, "Received Outline webhook event");
 

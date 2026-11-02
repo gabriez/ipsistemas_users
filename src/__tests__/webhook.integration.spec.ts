@@ -49,7 +49,7 @@ describe("Webhook Integration Tests (Outline - Strict Fail-Closed HMAC)", () => 
 
   describe("HMAC Cryptographic Security Gatekeeping", () => {
     const samplePayload = {
-      name: "users.create",
+      event: "users.create",
       model: {
         email: "test@ipsistemas.com",
         id: "914764ca-1abf-481b-9262-ea5ba3f3fc68",
@@ -122,7 +122,7 @@ describe("Webhook Integration Tests (Outline - Strict Fail-Closed HMAC)", () => 
           name: "Gabriel Torres",
           role: "member",
         },
-        name: "users.create",
+        event: "users.create",
       };
 
       const response = await postSignedWebhook(webhookPayload);
@@ -155,7 +155,7 @@ describe("Webhook Integration Tests (Outline - Strict Fail-Closed HMAC)", () => 
           email: "reactivated@ipsistemas.com",
           id: "55555555-1abf-481b-9262-ea5ba3f3fc68",
         },
-        name: "users.activate",
+        event: "users.activate",
       };
 
       const response = await postSignedWebhook(webhookPayload);
@@ -184,7 +184,7 @@ describe("Webhook Integration Tests (Outline - Strict Fail-Closed HMAC)", () => 
           email: "suspended@ipsistemas.com",
           id: "88888888-1abf-481b-9262-ea5ba3f3fc68",
         },
-        name: "users.suspend",
+        event: "users.suspend",
       };
 
       const response = await postSignedWebhook(webhookPayload);
@@ -211,7 +211,7 @@ describe("Webhook Integration Tests (Outline - Strict Fail-Closed HMAC)", () => 
           email: "pending@ipsistemas.com",
           id: "33333333-1abf-481b-9262-ea5ba3f3fc68",
         },
-        name: "users.update",
+        event: "users.update",
       };
 
       const response = await postSignedWebhook(webhookPayload);
@@ -230,7 +230,7 @@ describe("Webhook Integration Tests (Outline - Strict Fail-Closed HMAC)", () => 
           email: "unknown@ipsistemas.com",
           id: "00000000-0000-0000-0000-000000000000",
         },
-        name: "users.create",
+        event: "users.create",
       };
 
       const response = await postSignedWebhook(webhookPayload);

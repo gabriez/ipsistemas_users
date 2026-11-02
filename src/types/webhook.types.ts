@@ -1,16 +1,19 @@
 export interface OutlineWebhookEventPayload {
   id?: string;
-  name: string; // e.g. "users.create", "users.activate", "users.suspend", "users.update"
-  actorId?: string;
-  data?: {
+  actorId: string;
+  webhookSubscriptionId?: string;
+  createdAt?: string;
+  event: string; // e.g. "users.create", "users.activate", "users.suspend", "users.update"
+  payload: {
+    id: string;
     model?: {
       id?: string; // UUID
       email?: string;
       name?: string;
       role?: string;
+      isSuspended?: boolean;
       [key: string]: unknown;
     };
-    [key: string]: unknown;
   };
   model?: {
     id?: string; // UUID
@@ -20,7 +23,6 @@ export interface OutlineWebhookEventPayload {
     isSuspended?: boolean;
     [key: string]: unknown;
   };
-  createdAt?: string;
 }
 
 export interface WebhookHandleResult {
