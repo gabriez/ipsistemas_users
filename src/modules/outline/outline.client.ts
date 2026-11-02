@@ -57,12 +57,15 @@ export class OutlineClient {
    */
   async inviteUser(invite: OutlineUserInviteItem): Promise<OutlineUser | null> {
     const normalizedEmail = invite.email.trim().toLowerCase();
+    // Outline requires name to be between 1 and 255 chars
+    const fallbackName = normalizedEmail.split("@")[0] || "User";
+    const name = invite.name?.trim() || fallbackName;
 
     try {
       const response = await this.client.post<OutlineInviteResponse>("/api/users.invite", {
         invites: [
           {
-            name: invite.name?.trim() || "",
+            name,
             email: normalizedEmail,
             role: invite.role ?? "member",
           },
@@ -70,7 +73,7 @@ export class OutlineClient {
         suppressEmail: false,
       });
 
-      logger.info({ email: normalizedEmail, role: invite.role ?? "member" }, "Outline invitation sent successfully");
+      logger.info({ email: normalizedEmail, name, role: invite.role ?? "member" }, "Outline invitation sent successfully");
 
       const createdUsers = response.data?.data?.users;
       if (Array.isArray(createdUsers) && createdUsers.length > 0) {

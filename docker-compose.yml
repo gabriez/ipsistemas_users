@@ -11,7 +11,7 @@ services:
       MYSQL_USER: ${DB_USER:-ipsistemas_user}
       MYSQL_PASSWORD: ${DB_PASSWORD:-ipsistemas_password}
     ports:
-      - "${DB_PORT:-3306}:3306"
+      - "127.0.0.1:${DB_PORT:-3306}:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
     healthcheck:
@@ -29,7 +29,7 @@ services:
     container_name: ipsistemas-users-api
     restart: unless-stopped
     ports:
-      - "${PORT:-3000}:3000"
+      - "127.0.0.1:${PORT:-3000}:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000

@@ -7,6 +7,7 @@ export interface OutlineUser {
   suspendedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  isSuspended: boolean;
 }
 
 export interface OutlineUserInviteItem {

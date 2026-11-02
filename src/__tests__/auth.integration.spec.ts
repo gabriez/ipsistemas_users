@@ -2,6 +2,7 @@ import "reflect-metadata";
 import type { Express } from "express";
 import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { is } from "zod/v4/locales";
 import { createApp } from "../app.js";
 import { config } from "../config/index.js";
 import AppDataSource from "../database/appDataSource.js";
@@ -48,6 +49,7 @@ describe("Auth Integration Tests", () => {
         role: "member" as const,
         createdAt: "2026-03-30T12:00:00Z",
         updatedAt: "2026-03-30T12:00:00Z",
+        isSuspended: false,
       };
 
       vi.spyOn(outlineClient, "findUserByEmail").mockResolvedValue(null);
@@ -79,6 +81,7 @@ describe("Auth Integration Tests", () => {
         id: "77777777-1abf-481b-9262-ea5ba3f3fc68",
         name: "Existing User",
         email: "existing@ipsistemas.com",
+        isSuspended: false,
         role: "member" as const,
         createdAt: "2026-03-30T12:00:00Z",
         updatedAt: "2026-03-30T12:00:00Z",

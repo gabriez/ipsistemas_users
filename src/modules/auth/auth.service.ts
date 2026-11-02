@@ -10,7 +10,12 @@ const TOKEN_TTL_MINUTES = 15;
 
 export interface IAuthService {
   invite(input: InviteUserInput): Promise<InviteUserResponseDto>;
-  requestToken(input: RequestTokenInput): Promise<{ success: boolean; email: string; token: string; expires_at: string }>;
+  requestToken(input: RequestTokenInput): Promise<{
+    success: boolean;
+    email: string;
+    token: string;
+    expires_at: string;
+  }>;
   verifyToken(input: VerifyTokenInput): Promise<{ success: boolean; user: Partial<UserRecord> }>;
 }
 
@@ -40,13 +45,14 @@ export class AuthService implements IAuthService {
 
     // Call Outline to invite user with member role and suppressEmail: false
     let outlineUser = await outlineClient.findUserByEmail(email);
-
+    let invited = false;
     if (!outlineUser) {
       outlineUser = await outlineClient.inviteUser({
         email,
         name: input.name,
         role: "member",
       });
+      invited = true;
     }
 
     logger.info({ email, outlineId: outlineUser?.id }, "Outline user identity resolved");
@@ -58,7 +64,13 @@ export class AuthService implements IAuthService {
         email,
         is_verified: false,
         outline_id: outlineUser?.id ?? null,
-        status: UserStatus.PENDING,
+        status: outlineUser
+          ? invited
+            ? outlineUser.isSuspended
+              ? UserStatus.BLOCKED
+              : UserStatus.PENDING
+            : UserStatus.ACTIVE
+          : UserStatus.PENDING,
         telegram_id: telegramId,
       });
       logger.info({ email, outline_id: outlineUser?.id, userId: user.id }, "Created local user and linked Outline ID");
