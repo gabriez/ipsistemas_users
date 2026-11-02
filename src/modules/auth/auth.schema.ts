@@ -3,7 +3,7 @@ import { z } from "zod";
 export const inviteUserSchema = z.object({
   email: z.email("Formato de email invalido").trim().toLowerCase(),
   telegram_id: z.string().trim().regex(/^\d+$/, "telegram_id must be a numeric string"),
-  name: z.string().trim().max(100).optional(),
+  name: z.string().trim().max(100).min(0).optional(),
 });
 
 /**
